@@ -8,16 +8,22 @@ on:
   schedule:
     - cron: "17 6 * * 1"
 
+# One run per branch/PR; superseded runs are cancelled to save minutes.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 permissions:
-  contents: read
+  contents: read # default for all jobs — analyze widens only what CodeQL needs
 
 jobs:
   analyze:
+    name: CodeQL analyze (C#)
     runs-on: ubuntu-latest
     permissions:
-      actions: read
-      contents: read
-      security-events: write
+      actions: read # required by CodeQL to read workflow metadata in private repos
+      contents: read # checkout
+      security-events: write # upload SARIF results to code scanning
 
     steps:
       - name: Checkout

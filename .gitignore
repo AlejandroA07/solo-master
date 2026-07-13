@@ -6,7 +6,7 @@
 # dotenv files
 .env
 .env.*
-!.env.example
+# example env files are committed as env.example (no leading dot)
 *.db
 *.db-shm
 *.db-wal

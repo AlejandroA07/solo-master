@@ -6,11 +6,17 @@ on:
   pull_request:
     branches: [main]
 
+# One run per branch/PR; superseded runs are cancelled to save minutes.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 permissions:
-  contents: read
+  contents: read # checkout only — no job writes to the repo or its metadata
 
 jobs:
   verify:
+    name: Verify (build, format, tests)
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -27,6 +33,7 @@ jobs:
         run: ./scripts/verify.sh
 
   vulnerable-packages:
+    name: Vulnerable-package gate
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -44,13 +51,28 @@ jobs:
 
       - name: Check for vulnerable packages
         run: |
-          dotnet list SoloMaster.slnx package --vulnerable --include-transitive 2>&1 | tee vuln.txt
-          if grep -q "has the following vulnerable packages" vuln.txt; then
+          dotnet list SoloMaster.slnx package --vulnerable --include-transitive --format json > vuln.json
+          count=$(python3 - <<'PY'
+          import json
+          d = json.load(open('vuln.json'))
+          print(sum(
+              len(pkg.get('vulnerabilities') or [])
+              for proj in d.get('projects', [])
+              for fw in proj.get('frameworks') or []
+              for key in ('topLevelPackages', 'transitivePackages')
+              for pkg in fw.get(key) or []
+          ))
+          PY
+          )
+          echo "vulnerabilities found: $count"
+          if [ "$count" -gt 0 ]; then
+            cat vuln.json
             echo "Vulnerable packages detected — failing build."
             exit 1
           fi
 
   secret-scan:
+    name: Secret scan (full history)
     runs-on: ubuntu-latest
     steps:
       - name: Checkout full history
