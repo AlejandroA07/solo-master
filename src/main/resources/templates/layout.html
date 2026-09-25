@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org" th:fragment="page(title, content)">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title th:text="${title} + ' - Solo Master'">Solo Master</title>
+    <link rel="stylesheet" th:href="@{/bootstrap/dist/css/bootstrap.min.css}" />
+    <link rel="stylesheet" th:href="@{/css/site.css}" />
+</head>
+<body>
+    <header>
+        <nav class="navbar navbar-expand-sm navbar-light bg-white border-bottom box-shadow mb-3">
+            <div class="container">
+                <a class="navbar-brand" th:href="@{/}">Solo Master</a>
+            </div>
+        </nav>
+    </header>
+    <div class="container">
+        <main role="main" class="pb-3" th:replace="${content}"></main>
+    </div>
+
+    <footer class="border-top footer text-muted">
+        <div class="container">&copy; 2026 - Solo Master</div>
+    </footer>
+
+    <script th:src="@{/bootstrap/dist/js/bootstrap.bundle.min.js}"></script>
+</body>
+</html>

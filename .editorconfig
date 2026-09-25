@@ -7,7 +7,10 @@ insert_final_newline = true
 indent_style = space
 trim_trailing_whitespace = true
 
-[*.{cs,cshtml}]
+[*.java]
+indent_size = 2
+
+[*.{html,kts}]
 indent_size = 4
 
 [*.{json,yml,yaml}]
@@ -16,6 +19,5 @@ indent_size = 2
 [*.md]
 trim_trailing_whitespace = false
 
-[*.cs]
-dotnet_diagnostic.CA1707.severity = suggestion
-dotnet_diagnostic.CA1848.severity = suggestion
+[*.bat]
+end_of_line = crlf
