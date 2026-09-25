@@ -6,21 +6,26 @@ Instead of rewarding content consumption, it asks the learner to explain, write,
 
 ## Current status
 
-Solo Master has a verified .NET 10 foundation with a deterministic quality gate (`scripts/verify.sh`), CI, and security scanning. Learning features have not been implemented yet.
+Solo Master has a verified Java 21 / Spring Boot foundation with a deterministic quality gate (`scripts/verify.sh`), CI, and security scanning. Learning features have not been implemented yet.
 
-The initial subject is C# and .NET. The proposed first vertical slice covers loops and boundary errors using short retrieval-first learning sessions, deterministic code checks, targeted feedback, and delayed unaided mastery checks.
+The initial subject is Java and Spring Boot (switched from C# and .NET; see ADR-0003 in `docs/dev/decisions.md`). The roadmap's first vertical slice is being re-targeted to Java; older planning documents still describe it in C# terms.
 
 ## Working product hypothesis
 
-> After learning one small C# topic with Solo Master, the learner can explain and solve a fresh problem several days later without AI assistance better than they could using ordinary notes or tutorials.
+> After learning one small Java topic with Solo Master, the learner can explain and solve a fresh problem several days later without AI assistance better than they could using ordinary notes or tutorials.
 
-## Proposed stack
+## Stack
 
-- .NET 10 LTS
-- ASP.NET Core Razor Pages
-- EF Core 10 and SQLite
-- `Microsoft.Extensions.AI.IChatClient` at the AI infrastructure boundary
-- xUnit-based unit, integration, architecture, and browser tests where appropriate
+- Java 21 LTS, built with Gradle (Kotlin DSL) and the committed wrapper
+- Spring Boot with Spring MVC and Thymeleaf server-rendered pages
+- JUnit 5 and Spring Boot Test
+- Spotless with google-java-format
+- Proposed: SQLite for persistence; AI client library to be chosen in an ADR
 - Local-first, single-user modular monolith
 
-The product and technical choices remain proposals until the planning decisions are accepted.
+## Run it
+
+```bash
+./gradlew bootRun        # http://127.0.0.1:8080
+./scripts/verify.sh      # full quality gate
+```

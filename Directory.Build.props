@@ -1,9 +1,0 @@
-<Project>
-  <PropertyGroup>
-    <AnalysisLevel>latest-recommended</AnalysisLevel>
-    <Deterministic>true</Deterministic>
-    <EnableNETAnalyzers>true</EnableNETAnalyzers>
-    <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
-    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
-  </PropertyGroup>
-</Project>

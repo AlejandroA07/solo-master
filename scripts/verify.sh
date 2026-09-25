@@ -4,17 +4,15 @@ set -euo pipefail
 
 cd "$(dirname "$0")/.."
 
-echo "[verify] 1/4 restore locked dependencies"
-dotnet restore SoloMaster.slnx --locked-mode
+# Gradle resolves against the committed gradle.lockfile in strict mode, so any
+# unlocked or drifted dependency fails the build.
+echo "[verify] 1/3 compile with warnings as errors"
+./gradlew --no-daemon compileJava compileTestJava
 
-echo "[verify] 2/4 Release build"
-dotnet build SoloMaster.slnx --configuration Release --no-restore
+echo "[verify] 2/3 formatting"
+./gradlew --no-daemon spotlessCheck
 
-echo "[verify] 3/4 formatting"
-dotnet format whitespace SoloMaster.slnx --no-restore --verify-no-changes
-dotnet format style SoloMaster.slnx --no-restore --verify-no-changes --severity info
-
-echo "[verify] 4/4 tests"
-dotnet test SoloMaster.slnx --configuration Release --no-build --no-restore
+echo "[verify] 3/3 tests"
+./gradlew --no-daemon test
 
 echo "[verify] ALL GREEN"

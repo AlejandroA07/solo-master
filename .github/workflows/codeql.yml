@@ -18,7 +18,7 @@ permissions:
 
 jobs:
   analyze:
-    name: CodeQL analyze (C#)
+    name: CodeQL analyze (Java)
     runs-on: ubuntu-latest
     permissions:
       actions: read # required by CodeQL to read workflow metadata in private repos
@@ -31,21 +31,24 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Setup .NET
-        uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4
+      - name: Setup Java
+        uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
         with:
-          global-json-file: global.json
+          distribution: temurin
+          java-version: "21"
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
 
       - name: Initialize CodeQL
         uses: github/codeql-action/init@02c5e83432fe5497fd85b873b6c9f16a8578e1d9 # v3
         with:
-          languages: csharp
+          languages: java-kotlin
+          build-mode: manual
           queries: security-extended
 
       - name: Build
-        run: |
-          dotnet restore SoloMaster.slnx --locked-mode
-          dotnet build SoloMaster.slnx --configuration Release --no-restore
+        run: ./gradlew --no-daemon compileJava compileTestJava
 
       - name: Perform CodeQL analysis
         uses: github/codeql-action/analyze@02c5e83432fe5497fd85b873b6c9f16a8578e1d9 # v3

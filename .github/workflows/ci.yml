@@ -24,10 +24,14 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Setup .NET
-        uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4
+      - name: Setup Java
+        uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
         with:
-          global-json-file: global.json
+          distribution: temurin
+          java-version: "21"
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
 
       - name: Verify
         run: ./scripts/verify.sh
@@ -41,35 +45,13 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Setup .NET
-        uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4
+      # Scans the committed Gradle lock file (direct and transitive) against OSV;
+      # any known vulnerability fails the job.
+      - name: OSV-Scanner
+        uses: google/osv-scanner-action/osv-scanner-action@a345acffa64b0eaede81a3d9aae6141214d9c8fc # v2.6.0
         with:
-          global-json-file: global.json
-
-      - name: Restore
-        run: dotnet restore SoloMaster.slnx --locked-mode
-
-      - name: Check for vulnerable packages
-        run: |
-          dotnet list SoloMaster.slnx package --vulnerable --include-transitive --format json > vuln.json
-          count=$(python3 - <<'PY'
-          import json
-          d = json.load(open('vuln.json'))
-          print(sum(
-              len(pkg.get('vulnerabilities') or [])
-              for proj in d.get('projects', [])
-              for fw in proj.get('frameworks') or []
-              for key in ('topLevelPackages', 'transitivePackages')
-              for pkg in fw.get(key) or []
-          ))
-          PY
-          )
-          echo "vulnerabilities found: $count"
-          if [ "$count" -gt 0 ]; then
-            cat vuln.json
-            echo "Vulnerable packages detected — failing build."
-            exit 1
-          fi
+          scan-args: |-
+            --lockfile=gradle.lockfile
 
   secret-scan:
     name: Secret scan (full history)
