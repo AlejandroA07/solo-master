@@ -75,3 +75,9 @@ button.accept-policy {
   white-space: nowrap;
   line-height: 60px;
 }
+
+.brief {
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  font-size: 0.95rem;
+}

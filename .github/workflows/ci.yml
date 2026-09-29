@@ -45,13 +45,14 @@ jobs:
         with:
           persist-credentials: false
 
-      # Scans the committed Gradle lock file (direct and transitive) against OSV;
-      # any known vulnerability fails the job.
+      # Scans the committed Gradle lock file and the transcript tool's pinned Python
+      # requirements (direct and transitive) against OSV; any known vulnerability fails the job.
       - name: OSV-Scanner
         uses: google/osv-scanner-action/osv-scanner-action@a345acffa64b0eaede81a3d9aae6141214d9c8fc # v2.6.0
         with:
           scan-args: |-
             --lockfile=gradle.lockfile
+            --lockfile=scripts/research/requirements.txt
 
   secret-scan:
     name: Secret scan (full history)
