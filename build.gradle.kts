@@ -28,6 +28,10 @@ dependencyLocking {
 // GHSA-h3x4-894j-xpx5). Remove once a Spring Boot release manages 11.0.25 or later.
 extra["tomcat.version"] = "11.0.26"
 
+// Overrides Spring Boot 4.1.1's managed Jackson 3.1.5 (GHSA-gx83-3vf8-gh7j, GHSA-q4xh-88c3-wmh7,
+// GHSA-wjgm-6hv5-3cvf; fixed in 3.1.6). Remove once a Spring Boot release manages 3.1.6 or later.
+extra["jackson-bom.version"] = "3.1.7"
+
 dependencies {
     implementation("org.springframework.boot:spring-boot-starter-web")
     implementation("org.springframework.boot:spring-boot-starter-thymeleaf")
