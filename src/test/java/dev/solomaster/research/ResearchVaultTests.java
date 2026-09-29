@@ -56,6 +56,8 @@ class ResearchVaultTests {
     assertThat(ResearchVault.slug("Café Größe")).isEqualTo("cafe-gro-e");
     assertThat(ResearchVault.slug("///")).isEqualTo("brief");
     assertThat(ResearchVault.slug("a".repeat(200))).hasSize(60);
+    assertThat(ResearchVault.slug("a".repeat(59) + "-b")).isEqualTo("a".repeat(59));
+    assertThat(ResearchVault.slug("-".repeat(50_000) + "x" + "-".repeat(50_000))).isEqualTo("x");
   }
 
   @Test

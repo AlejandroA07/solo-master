@@ -133,11 +133,23 @@ class ResearchVault {
         Normalizer.normalize(title == null ? "" : title, Normalizer.Form.NFKD)
             .replaceAll("\\p{M}", "")
             .toLowerCase(Locale.ROOT);
-    String slug = ascii.replaceAll("[^a-z0-9]+", "-").replaceAll("^-+|-+$", "");
+    String slug = trimDashes(ascii.replaceAll("[^a-z0-9]+", "-"));
     if (slug.length() > MAX_SLUG_LENGTH) {
-      slug = slug.substring(0, MAX_SLUG_LENGTH).replaceAll("-+$", "");
+      slug = trimDashes(slug.substring(0, MAX_SLUG_LENGTH));
     }
     return slug.isEmpty() ? "brief" : slug;
+  }
+
+  private static String trimDashes(String value) {
+    int start = 0;
+    int end = value.length();
+    while (start < end && value.charAt(start) == '-') {
+      start++;
+    }
+    while (end > start && value.charAt(end - 1) == '-') {
+      end--;
+    }
+    return value.substring(start, end);
   }
 
   private Path folder(String name) {

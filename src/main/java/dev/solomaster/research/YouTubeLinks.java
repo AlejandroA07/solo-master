@@ -11,6 +11,8 @@ import java.util.regex.Pattern;
 final class YouTubeLinks {
 
   private static final Pattern VIDEO_ID = Pattern.compile("[A-Za-z0-9_-]{11}");
+  private static final String VIDEO_ID_ALPHABET =
+      "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_-";
   private static final Set<String> WATCH_HOSTS =
       Set.of("youtube.com", "www.youtube.com", "m.youtube.com");
   private static final Set<String> PATH_PREFIXES = Set.of("/shorts/", "/live/", "/embed/");
@@ -19,6 +21,21 @@ final class YouTubeLinks {
 
   static boolean isVideoId(String candidate) {
     return candidate != null && VIDEO_ID.matcher(candidate).matches();
+  }
+
+  /**
+   * Returns a validated video ID rebuilt character by character from the allowed alphabet, so the
+   * value that reaches a command line is application-owned rather than the caller's string.
+   */
+  static String requireVideoId(String candidate) {
+    if (!isVideoId(candidate)) {
+      throw new IllegalArgumentException("Not a YouTube video ID");
+    }
+    StringBuilder id = new StringBuilder(candidate.length());
+    for (int i = 0; i < candidate.length(); i++) {
+      id.append(VIDEO_ID_ALPHABET.charAt(VIDEO_ID_ALPHABET.indexOf(candidate.charAt(i))));
+    }
+    return id.toString();
   }
 
   static Optional<String> videoId(String link) {

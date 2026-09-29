@@ -35,11 +35,9 @@ class TranscriptFetcher {
   }
 
   String fetch(String videoId) {
-    if (!YouTubeLinks.isVideoId(videoId)) {
-      throw new IllegalArgumentException("Not a YouTube video ID");
-    }
+    String safeVideoId = YouTubeLinks.requireVideoId(videoId);
     List<String> arguments = new ArrayList<>(command);
-    arguments.add(videoId);
+    arguments.add(safeVideoId);
     ProcessBuilder builder =
         new ProcessBuilder(arguments).redirectError(ProcessBuilder.Redirect.DISCARD);
     Map<String, String> environment = builder.environment();
