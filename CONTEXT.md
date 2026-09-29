@@ -41,6 +41,10 @@ A fully or partly solved problem shown to the learner. Studying one is never Evi
 Reviewed, compressed notes for an Artifact or Learning Path. Always Aided material, and never available during a Mastery Check.
 _Avoid_: Cheat sheet, notes
 
+**Draft**:
+A proposed Artifact or Reference Sheet, usually derived from a research brief, that Learning holds until the learner reviews it. Only an approved Draft enters a Learning Path.
+_Avoid_: Suggestion, pending item
+
 **Placement**:
 The learner's starting point on a Learning Path, from disclosed prior knowledge or a diagnostic probe. It can bring a Mastery Check forward but is never mastery Evidence.
 _Avoid_: Pre-test, level
