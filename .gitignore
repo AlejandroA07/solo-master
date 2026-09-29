@@ -63,3 +63,9 @@ Thumbs.db
 
 # Vim
 *.swp
+
+# Research transcript tool environment (scripts/setup-research-venv.sh)
+.venv-research/
+
+# Local, uncommitted configuration (vault path, API keys)
+config/

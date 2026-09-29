@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout :: page(title='Brief', content=~{::main})}">
+<body>
+<main role="main" class="pb-3">
+    <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+        <h1 class="h3 mb-0" data-testid="brief-name" th:text="${name}">Brief</h1>
+        <div>
+            <a class="btn btn-outline-primary" th:href="${obsidianUri}"
+               data-testid="open-in-obsidian">Open in Obsidian</a>
+            <a class="btn btn-outline-secondary" th:href="@{/research/new}">New research</a>
+        </div>
+    </div>
+    <pre class="brief" data-testid="brief-markdown" th:text="${markdown}">Brief</pre>
+</main>
+</body>
+</html>

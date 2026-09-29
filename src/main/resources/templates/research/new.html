@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout :: page(title='New research', content=~{::main})}">
+<body>
+<main role="main" class="pb-3">
+    <h1 data-testid="research-heading">New research</h1>
+    <p>Give a YouTube link, or paste the text of an article, post, or transcript. The brief is
+        written to your vault under <code>Research/Briefs/</code> as <em>unreviewed</em>.</p>
+
+    <div class="alert alert-danger" role="alert" th:if="${error}" th:text="${error}"
+         data-testid="research-error">Error</div>
+
+    <form method="post" th:action="@{/research}">
+        <div class="mb-3">
+            <label for="link" class="form-label">YouTube link or source URL</label>
+            <input type="url" class="form-control" id="link" name="link" maxlength="2048"
+                   th:value="${request.link}" aria-describedby="link-help" />
+            <div id="link-help" class="form-text">Only YouTube captions are fetched. For any other
+                page, paste its text below; the URL is kept as provenance.</div>
+        </div>
+        <div class="mb-3">
+            <label for="title" class="form-label">Title (optional)</label>
+            <input type="text" class="form-control" id="title" name="title" maxlength="200"
+                   th:value="${request.title}" />
+        </div>
+        <div class="mb-3">
+            <label for="text" class="form-label">Pasted text (optional for YouTube)</label>
+            <textarea class="form-control" id="text" name="text" rows="10"
+                      th:attr="maxlength=${maxText}" th:text="${request.text}"></textarea>
+        </div>
+        <button type="submit" class="btn btn-primary">Write brief</button>
+        <span class="form-text ms-2">This can take a minute.</span>
+    </form>
+</main>
+</body>
+</html>
