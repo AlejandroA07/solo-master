@@ -3,6 +3,7 @@ package dev.solomaster.research;
 import static java.nio.charset.StandardCharsets.UTF_8;
 
 import java.net.URI;
+import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -19,24 +20,37 @@ import tools.jackson.databind.json.JsonMapper;
 
 /**
  * Chat completions against OpenAI-compatible endpoints with ordered failover (ADR-0001, ADR-0005).
- * A failed or rate-limited provider hands over to the next; unusable output is retried once on the
- * same provider first. Logs name the provider and status only, never keys or prompt text.
+ * A busy provider (429 or 503) is retried after a short pause, then hands over to the next, as does
+ * any other failure; unusable output is retried once on the same provider first. Logs name the
+ * provider, status, and the provider's own error message, never keys or prompt text.
  */
 class OpenAiCompatibleModelClient implements ModelClient {
 
   private static final Logger log = LoggerFactory.getLogger(OpenAiCompatibleModelClient.class);
   private static final int ATTEMPTS_PER_PROVIDER = 2;
+  private static final List<Duration> BUSY_RETRY_PAUSES =
+      List.of(Duration.ofSeconds(2), Duration.ofSeconds(5));
+  private static final int MAX_ERROR_DETAIL_CHARS = 300;
+
+  /** Waits between busy retries; tests pass a recorder instead of sleeping. */
+  @FunctionalInterface
+  interface Pause {
+    void await(Duration duration) throws InterruptedException;
+  }
 
   private final List<ResearchProperties.Provider> providers;
   private final RestClient http;
-  private final JsonMapper json = JsonMapper.builder().build();
+  private final Pause pause;
+  private static final JsonMapper json = JsonMapper.builder().build();
 
-  OpenAiCompatibleModelClient(List<ResearchProperties.Provider> providers, RestClient http) {
+  OpenAiCompatibleModelClient(
+      List<ResearchProperties.Provider> providers, RestClient http, Pause pause) {
     for (ResearchProperties.Provider provider : providers) {
       requireFreeOpenRouterModel(provider);
     }
     this.providers = List.copyOf(providers);
     this.http = http;
+    this.pause = pause;
   }
 
   @Override
@@ -62,6 +76,38 @@ class OpenAiCompatibleModelClient implements ModelClient {
 
   /** Returns the reply text, or empty when this provider failed and the next should be tried. */
   private Optional<String> call(ResearchProperties.Provider provider, ModelPrompt prompt) {
+    for (int busyRetry = 0; ; busyRetry++) {
+      Optional<Response> response = send(provider, prompt);
+      if (response.isEmpty()) {
+        return Optional.empty();
+      }
+      int status = response.get().status();
+      if (status == 200) {
+        return Optional.of(replyText(response.get().body()));
+      }
+      log.warn(
+          "Model provider {} ({}) returned HTTP {}: {}",
+          provider.name(),
+          provider.model(),
+          status,
+          errorDetail(response.get().body(), provider.apiKey()));
+      boolean busy = status == 429 || status == 503;
+      if (!busy || busyRetry == BUSY_RETRY_PAUSES.size()) {
+        return Optional.empty();
+      }
+      try {
+        pause.await(BUSY_RETRY_PAUSES.get(busyRetry));
+      } catch (InterruptedException e) {
+        Thread.currentThread().interrupt();
+        return Optional.empty();
+      }
+    }
+  }
+
+  private record Response(int status, String body) {}
+
+  /** Sends one request; empty when the provider could not be reached at all. */
+  private Optional<Response> send(ResearchProperties.Provider provider, ModelPrompt prompt) {
     String body =
         json.writeValueAsString(
             Map.of(
@@ -78,19 +124,44 @@ class OpenAiCompatibleModelClient implements ModelClient {
           .contentType(MediaType.APPLICATION_JSON)
           .body(body)
           .exchange(
-              (request, response) -> {
-                int status = response.getStatusCode().value();
-                String responseBody = new String(response.getBody().readAllBytes(), UTF_8);
-                if (status != 200) {
-                  log.warn("Model provider {} returned HTTP {}", provider.name(), status);
-                  return Optional.empty();
-                }
-                return Optional.of(replyText(responseBody));
-              });
+              (request, response) ->
+                  Optional.of(
+                      new Response(
+                          response.getStatusCode().value(),
+                          new String(response.getBody().readAllBytes(), UTF_8))));
     } catch (RestClientException e) {
       log.warn("Model provider {} unreachable: {}", provider.name(), e.getClass().getSimpleName());
       return Optional.empty();
     }
+  }
+
+  /**
+   * The provider's own explanation of a failed request, safe to log: OpenRouter's relayed upstream
+   * message when present, else the error message (Gemini wraps it in an array). The API key is
+   * redacted, control characters are flattened, and the result is capped; unreadable bodies give an
+   * empty string.
+   */
+  static String errorDetail(String responseBody, String apiKey) {
+    JsonNode root;
+    try {
+      root = json.readTree(responseBody);
+    } catch (JacksonException e) {
+      return "";
+    }
+    JsonNode error = (root.isArray() ? root.path(0) : root).path("error");
+    JsonNode upstream = error.path("metadata").path("raw");
+    JsonNode message = upstream.isString() ? upstream : error.path("message");
+    if (!message.isString()) {
+      return "";
+    }
+    String detail = message.asString();
+    if (apiKey != null && !apiKey.isBlank()) {
+      detail = detail.replace(apiKey, "[redacted]");
+    }
+    detail = detail.replaceAll("\\p{Cntrl}+", " ").strip();
+    return detail.length() > MAX_ERROR_DETAIL_CHARS
+        ? detail.substring(0, MAX_ERROR_DETAIL_CHARS)
+        : detail;
   }
 
   /** Extracts the first choice's content; malformed JSON yields empty text, which is unusable. */
