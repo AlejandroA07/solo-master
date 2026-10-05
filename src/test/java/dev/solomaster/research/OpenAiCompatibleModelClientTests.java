@@ -10,6 +10,8 @@ import static org.springframework.test.web.client.response.MockRestResponseCreat
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withStatus;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
 
+import java.time.Duration;
+import java.util.ArrayList;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpMethod;
@@ -29,6 +31,7 @@ class OpenAiCompatibleModelClientTests {
 
   private final RestClient.Builder builder = RestClient.builder();
   private final MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
+  private final List<Duration> pauses = new ArrayList<>();
 
   @Test
   void returnsTheFirstProvidersReplyWithProvenance() {
@@ -48,7 +51,13 @@ class OpenAiCompatibleModelClientTests {
   }
 
   @Test
-  void failsOverToTheNextProviderOnRateLimit() {
+  void retriesABusyProviderAfterAPauseThenFailsOver() {
+    server
+        .expect(requestTo("https://first.example/v1/chat/completions"))
+        .andRespond(withStatus(HttpStatus.TOO_MANY_REQUESTS));
+    server
+        .expect(requestTo("https://first.example/v1/chat/completions"))
+        .andRespond(withStatus(HttpStatus.SERVICE_UNAVAILABLE));
     server
         .expect(requestTo("https://first.example/v1/chat/completions"))
         .andRespond(withStatus(HttpStatus.TOO_MANY_REQUESTS));
@@ -58,6 +67,33 @@ class OpenAiCompatibleModelClientTests {
         .andRespond(reply("good"));
 
     assertThat(client(FIRST, SECOND).complete(PROMPT, text -> true).provider()).isEqualTo("second");
+    assertThat(pauses).containsExactly(Duration.ofSeconds(2), Duration.ofSeconds(5));
+    server.verify();
+  }
+
+  @Test
+  void acceptsAReplyAfterABusyRetry() {
+    server
+        .expect(requestTo("https://first.example/v1/chat/completions"))
+        .andRespond(withStatus(HttpStatus.SERVICE_UNAVAILABLE));
+    server.expect(requestTo("https://first.example/v1/chat/completions")).andRespond(reply("good"));
+
+    assertThat(client(FIRST, SECOND).complete(PROMPT, text -> true).provider()).isEqualTo("first");
+    assertThat(pauses).containsExactly(Duration.ofSeconds(2));
+    server.verify();
+  }
+
+  @Test
+  void failsOverWithoutWaitingOnAnErrorThatIsNotBusy() {
+    server
+        .expect(requestTo("https://first.example/v1/chat/completions"))
+        .andRespond(withStatus(HttpStatus.NOT_FOUND));
+    server
+        .expect(requestTo("https://second.example/v1/chat/completions"))
+        .andRespond(reply("good"));
+
+    assertThat(client(FIRST, SECOND).complete(PROMPT, text -> true).provider()).isEqualTo("second");
+    assertThat(pauses).isEmpty();
     server.verify();
   }
 
@@ -104,9 +140,11 @@ class OpenAiCompatibleModelClientTests {
 
   @Test
   void failsLoudlyWhenEveryProviderIsExhausted() {
-    server
-        .expect(requestTo("https://first.example/v1/chat/completions"))
-        .andRespond(withStatus(HttpStatus.TOO_MANY_REQUESTS));
+    for (int call = 0; call < 3; call++) {
+      server
+          .expect(requestTo("https://first.example/v1/chat/completions"))
+          .andRespond(withStatus(HttpStatus.TOO_MANY_REQUESTS));
+    }
     server
         .expect(requestTo("https://second.example/v1/chat/completions"))
         .andRespond(withServerError());
@@ -142,8 +180,47 @@ class OpenAiCompatibleModelClientTests {
     assertThat(client(free)).isNotNull();
   }
 
+  @Test
+  void errorDetailPrefersTheUpstreamMessageOpenRouterRelays() {
+    String body =
+        """
+        {"error":{"message":"Provider returned error","code":429,
+        "metadata":{"raw":"model is temporarily rate-limited upstream"}},"user_id":"user_1"}""";
+
+    assertThat(OpenAiCompatibleModelClient.errorDetail(body, "key"))
+        .isEqualTo("model is temporarily rate-limited upstream");
+  }
+
+  @Test
+  void errorDetailReadsGeminisArrayWrappedError() {
+    String body =
+        """
+        [{"error":{"code":503,"message":"This model is currently experiencing high demand.",\
+        "status":"UNAVAILABLE"}}]""";
+
+    assertThat(OpenAiCompatibleModelClient.errorDetail(body, "key"))
+        .isEqualTo("This model is currently experiencing high demand.");
+  }
+
+  @Test
+  void errorDetailNeverRevealsTheApiKeyOrControlCharacters() {
+    String body = "{\"error\":{\"message\":\"bad key secret-123\\nforged log line\"}}";
+
+    assertThat(OpenAiCompatibleModelClient.errorDetail(body, "secret-123"))
+        .isEqualTo("bad key [redacted] forged log line");
+  }
+
+  @Test
+  void errorDetailIsShortAndEmptyForUnreadableBodies() {
+    String longBody = "{\"error\":{\"message\":\"" + "x".repeat(1000) + "\"}}";
+
+    assertThat(OpenAiCompatibleModelClient.errorDetail(longBody, "key")).hasSize(300);
+    assertThat(OpenAiCompatibleModelClient.errorDetail("<html>Bad gateway</html>", "key"))
+        .isEmpty();
+  }
+
   private OpenAiCompatibleModelClient client(ResearchProperties.Provider... providers) {
-    return new OpenAiCompatibleModelClient(List.of(providers), builder.build());
+    return new OpenAiCompatibleModelClient(List.of(providers), builder.build(), pauses::add);
   }
 
   private static org.springframework.test.web.client.ResponseCreator reply(String content) {

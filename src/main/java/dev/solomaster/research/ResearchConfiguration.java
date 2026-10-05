@@ -34,7 +34,9 @@ class ResearchConfiguration {
     JdkClientHttpRequestFactory requestFactory = new JdkClientHttpRequestFactory(httpClient);
     requestFactory.setReadTimeout(properties.modelTimeout());
     return new OpenAiCompatibleModelClient(
-        properties.providers(), RestClient.builder().requestFactory(requestFactory).build());
+        properties.providers(),
+        RestClient.builder().requestFactory(requestFactory).build(),
+        Thread::sleep);
   }
 
   @Bean
