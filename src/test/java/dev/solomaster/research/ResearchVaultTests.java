@@ -32,7 +32,7 @@ class ResearchVaultTests {
     ResearchVault vault = vault();
     assertThat(vault.setupContext()).contains("# My setup").contains("Never put passwords");
 
-    Path setup = vaultDir.resolve("Research/Context/my-setup.md");
+    Path setup = vaultDir.resolve("SoloMaster/Research/Context/my-setup.md");
     Files.writeString(setup, "I use IntelliJ.", UTF_8);
     assertThat(vault.setupContext()).isEqualTo("I use IntelliJ.");
   }
@@ -46,7 +46,8 @@ class ResearchVaultTests {
 
     assertThat(first).isEqualTo("2026-09-29-loops-boundaries.md");
     assertThat(second).isEqualTo("2026-09-29-loops-boundaries-2.md");
-    assertThat(Files.readString(vaultDir.resolve("Research/Briefs/" + first))).isEqualTo("one");
+    assertThat(Files.readString(vaultDir.resolve("SoloMaster/Research/Briefs/" + first)))
+        .isEqualTo("one");
     assertThat(vault.readBrief(second)).contains("two");
   }
 
@@ -65,7 +66,8 @@ class ResearchVaultTests {
     ResearchVault vault = vault();
     vault.writeSource("2026-09-29-loops.md", "transcript");
 
-    assertThat(Files.readString(vaultDir.resolve("Research/Sources/2026-09-29-loops.md")))
+    assertThat(
+            Files.readString(vaultDir.resolve("SoloMaster/Research/Sources/2026-09-29-loops.md")))
         .isEqualTo("transcript");
     assertThatThrownBy(() -> vault.writeSource("../../outside.md", "x"))
         .isInstanceOf(IllegalArgumentException.class);
@@ -91,7 +93,8 @@ class ResearchVaultTests {
     ResearchVault vault = vault();
     vault.writeBrief(DAY, "real", "inside");
     Path outside = Files.writeString(vaultDir.resolve("outside.txt"), "secret", UTF_8);
-    Files.createSymbolicLink(vaultDir.resolve("Research/Briefs/2026-09-29-link.md"), outside);
+    Files.createSymbolicLink(
+        vaultDir.resolve("SoloMaster/Research/Briefs/2026-09-29-link.md"), outside);
 
     assertThat(vault.readBrief("2026-09-29-link.md")).isEmpty();
   }
@@ -99,7 +102,17 @@ class ResearchVaultTests {
   @Test
   void refusesAResearchFolderThatLinksOutsideTheVault() throws IOException {
     Path elsewhere = Files.createTempDirectory("elsewhere");
-    Files.createSymbolicLink(vaultDir.resolve("Research"), elsewhere);
+    Files.createDirectories(vaultDir.resolve("SoloMaster"));
+    Files.createSymbolicLink(vaultDir.resolve("SoloMaster/Research"), elsewhere);
+
+    assertThatThrownBy(() -> vault().writeBrief(DAY, "x", "y"))
+        .isInstanceOf(IllegalStateException.class);
+  }
+
+  @Test
+  void refusesASoloMasterFolderThatLinksOutsideTheVault() throws IOException {
+    Path elsewhere = Files.createTempDirectory("elsewhere");
+    Files.createSymbolicLink(vaultDir.resolve("SoloMaster"), elsewhere);
 
     assertThatThrownBy(() -> vault().writeBrief(DAY, "x", "y"))
         .isInstanceOf(IllegalStateException.class);
@@ -111,7 +124,8 @@ class ResearchVaultTests {
     ResearchVault vault = new ResearchVault(named.toString());
 
     assertThat(vault.obsidianUri("2026-09-29-loops.md"))
-        .isEqualTo("obsidian://open?vault=My%20Vault&file=Research%2FBriefs%2F2026-09-29-loops.md");
+        .isEqualTo(
+            "obsidian://open?vault=My%20Vault&file=SoloMaster%2FResearch%2FBriefs%2F2026-09-29-loops.md");
   }
 
   private ResearchVault vault() {

@@ -109,7 +109,7 @@ class BriefService {
             + "\ncontent_hash: "
             + quoted("sha256:" + sha256(source))
             + "\nbrief: "
-            + quoted("Research/Briefs/" + name)
+            + quoted(ResearchVault.FOLDER + "/Briefs/" + name)
             + "\n---\n\n"
             + source
             + "\n";
