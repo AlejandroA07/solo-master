@@ -92,8 +92,13 @@ class BriefService {
             + "\nprompt_version: "
             + BriefPrompt.VERSION
             + "\nstatus: unreviewed\ntriage: []\n---\n\n";
-    String brief = frontMatter + "# " + title + "\n\n" + BriefPrompt.clean(reply.text()) + "\n";
-    String name = vault.writeBrief(LocalDate.ofInstant(now, clock.getZone()), title, brief);
+    String heading = frontMatter + "# " + title + "\n\n";
+    String body = BriefPrompt.clean(reply.text()) + "\n";
+    String name =
+        vault.writeBrief(
+            LocalDate.ofInstant(now, clock.getZone()),
+            title,
+            noteName -> heading + transcriptLink(noteName) + body);
 
     String sourceNote =
         "---\nsource_url: "
@@ -115,6 +120,12 @@ class BriefService {
             + "\n";
     vault.writeSource(name, sourceNote);
     return name;
+  }
+
+  /** An Obsidian link to the source note, which shares the brief's note name. */
+  private static String transcriptLink(String noteName) {
+    String target = ResearchVault.FOLDER + "/Sources/" + noteName.replaceFirst("\\.md$", "");
+    return "Transcript: [[" + target + "|full transcript]]\n\n";
   }
 
   private static void validateLengths(String link, String title, String text) {
