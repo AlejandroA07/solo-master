@@ -18,9 +18,13 @@ import java.util.regex.Pattern;
 
 /**
  * The Obsidian vault as seen by the research module (ADR-0004): it writes only under {@code
- * Research/}, never overwrites a note, and checks every resolved path stays inside its folder.
+ * SoloMaster/Research/}, never overwrites a note, and checks every resolved path stays inside its
+ * folder.
  */
 class ResearchVault {
+
+  /** The research folder, relative to the vault root. */
+  static final String FOLDER = "SoloMaster/Research";
 
   static final Pattern NOTE_NAME =
       Pattern.compile("\\d{4}-\\d{2}-\\d{2}-[a-z0-9]+(?:-[a-z0-9]+)*\\.md");
@@ -53,7 +57,7 @@ class ResearchVault {
       this.research = null;
     } else {
       this.vault = Path.of(vaultPath).toAbsolutePath().normalize();
-      this.research = vault.resolve("Research");
+      this.research = vault.resolve(FOLDER);
     }
   }
 
@@ -76,7 +80,7 @@ class ResearchVault {
     }
   }
 
-  /** Writes a new brief under {@code Research/Briefs/} and returns its note name. */
+  /** Writes a new brief under {@code SoloMaster/Research/Briefs/} and returns its note name. */
   String writeBrief(LocalDate date, String title, String markdown) {
     Path briefs = folder("Briefs");
     String base = date + "-" + slug(title);
@@ -93,7 +97,9 @@ class ResearchVault {
     }
   }
 
-  /** Writes the source text under {@code Research/Sources/} with the brief's note name. */
+  /**
+   * Writes the source text under {@code SoloMaster/Research/Sources/} with the brief's note name.
+   */
   void writeSource(String name, String markdown) {
     requireNoteName(name);
     try {
@@ -125,7 +131,7 @@ class ResearchVault {
     return "obsidian://open?vault="
         + encode(vault.getFileName().toString())
         + "&file="
-        + encode("Research/Briefs/" + name);
+        + encode(FOLDER + "/Briefs/" + name);
   }
 
   static String slug(String title) {

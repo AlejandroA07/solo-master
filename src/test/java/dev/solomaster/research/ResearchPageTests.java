@@ -84,7 +84,7 @@ class ResearchPageTests {
     String name = LocalDate.now() + "-loops-and-boundaries.md";
     assertThat(created.location()).endsWith("/research/briefs/" + name);
 
-    String brief = Files.readString(vaultDir.resolve("Research/Briefs/" + name), UTF_8);
+    String brief = Files.readString(vaultDir.resolve("SoloMaster/Research/Briefs/" + name), UTF_8);
     assertThat(brief)
         .startsWith("---\n")
         .contains("source_url: \"https://example.com/article\"")
@@ -96,9 +96,9 @@ class ResearchPageTests {
         .contains("prompt_version: brief-v1")
         .contains("status: unreviewed")
         .contains("# Loops and boundaries\n\n## In short");
-    assertThat(Files.readString(vaultDir.resolve("Research/Sources/" + name), UTF_8))
+    assertThat(Files.readString(vaultDir.resolve("SoloMaster/Research/Sources/" + name), UTF_8))
         .contains("For loops end early.")
-        .contains("brief: \"Research/Briefs/" + name + "\"");
+        .contains("brief: \"SoloMaster/Research/Briefs/" + name + "\"");
     assertThat(model.lastPrompt.get().user())
         .contains("# My setup")
         .contains("<source>\nFor loops end early.\n</source>");
