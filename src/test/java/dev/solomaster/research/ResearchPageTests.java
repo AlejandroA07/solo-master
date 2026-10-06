@@ -35,12 +35,43 @@ class ResearchPageTests {
     registry.add("solomaster.research.vault-path", vaultDir::toString);
   }
 
+  static final String DESCRIBED_VIDEO = "aaaaaaaaaaa";
+  static final String UNDESCRIBED_VIDEO = "bbbbbbbbbbb";
+
   @TestConfiguration
   static class FakeModel {
     @Bean
     @Primary
     RecordingModelClient recordingModelClient() {
       return new RecordingModelClient();
+    }
+
+    /** Captions for any video, without running the transcript tool. */
+    @Bean
+    @Primary
+    TranscriptFetcher fakeTranscriptFetcher() {
+      return new TranscriptFetcher(java.util.List.of("unused"), java.time.Duration.ZERO, 0) {
+        @Override
+        String fetch(String videoId) {
+          return "[00:01] Captions for " + videoId;
+        }
+      };
+    }
+
+    /** Details for one known video only, without touching the network. */
+    @Bean
+    @Primary
+    YouTubeVideoDetails fakeVideoDetails() {
+      return new YouTubeVideoDetails("https://unused.example", "unused", RestClient.create()) {
+        @Override
+        java.util.Optional<VideoDetails> lookup(String videoId) {
+          return DESCRIBED_VIDEO.equals(videoId)
+              ? java.util.Optional.of(
+                  new VideoDetails(
+                      "Records in \"Java\" 21", "Java Channel", LocalDate.of(2026, 9, 30)))
+              : java.util.Optional.empty();
+        }
+      };
     }
   }
 
@@ -110,6 +141,47 @@ class ResearchPageTests {
     assertThat(page.getBody())
         .contains("status: unreviewed")
         .contains("href=\"obsidian://open?vault=");
+  }
+
+  @Test
+  void namesAVideoBriefAfterTheVideoAndRecordsChannelAndDate() throws IOException {
+    Result created = post(form("https://youtu.be/" + DESCRIBED_VIDEO, "", ""), null);
+
+    assertThat(created.status()).isEqualTo(302);
+    String name = LocalDate.now() + "-records-in-java-21.md";
+    assertThat(created.location()).endsWith("/research/briefs/" + name);
+    String brief = Files.readString(vaultDir.resolve("SoloMaster/Research/Briefs/" + name), UTF_8);
+    assertThat(brief)
+        .contains("type: youtube")
+        .contains("title: \"Records in \\\"Java\\\" 21\"")
+        .contains("author: \"Java Channel\"")
+        .contains("published: \"2026-09-30\"")
+        .contains("transcript_source: youtube-transcript-api")
+        .contains("# Records in \"Java\" 21\n");
+    assertThat(Files.readString(vaultDir.resolve("SoloMaster/Research/Sources/" + name), UTF_8))
+        .contains("author: \"Java Channel\"")
+        .contains("published: \"2026-09-30\"")
+        .contains("Captions for " + DESCRIBED_VIDEO);
+    assertThat(model.lastPrompt.get().user()).contains("Title: Records in \"Java\" 21\n");
+  }
+
+  @Test
+  void keepsTheVideoIdTitleWhenNoDetailsAreAvailable() throws IOException {
+    Result created =
+        post(form("https://www.youtube.com/watch?v=" + UNDESCRIBED_VIDEO, "", ""), null);
+
+    String name = LocalDate.now() + "-youtube-video-" + UNDESCRIBED_VIDEO + ".md";
+    assertThat(created.location()).endsWith("/research/briefs/" + name);
+    assertThat(Files.readString(vaultDir.resolve("SoloMaster/Research/Briefs/" + name), UTF_8))
+        .contains("author: \"\"")
+        .contains("published: \"\"");
+  }
+
+  @Test
+  void prefersTheTitleTypedInTheForm() {
+    Result created = post(form("https://youtu.be/" + DESCRIBED_VIDEO, "My own name", ""), null);
+
+    assertThat(created.location()).endsWith("-my-own-name.md");
   }
 
   @Test

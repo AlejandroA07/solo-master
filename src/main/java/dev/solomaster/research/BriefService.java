@@ -23,12 +23,19 @@ class BriefService {
 
   private final ResearchVault vault;
   private final TranscriptFetcher transcripts;
+  private final YouTubeVideoDetails videoDetails;
   private final ModelClient model;
   private final Clock clock;
 
-  BriefService(ResearchVault vault, TranscriptFetcher transcripts, ModelClient model, Clock clock) {
+  BriefService(
+      ResearchVault vault,
+      TranscriptFetcher transcripts,
+      YouTubeVideoDetails videoDetails,
+      ModelClient model,
+      Clock clock) {
     this.vault = vault;
     this.transcripts = transcripts;
+    this.videoDetails = videoDetails;
     this.model = model;
     this.clock = clock;
   }
@@ -61,9 +68,19 @@ class BriefService {
     } else {
       throw new ResearchInputException("Give a YouTube link or paste the source text.");
     }
+    Optional<YouTubeVideoDetails.VideoDetails> details = videoId.flatMap(videoDetails::lookup);
+    if (title == null) {
+      title = details.map(YouTubeVideoDetails.VideoDetails::title).orElse(null);
+    }
     if (title == null) {
       title = videoId.map(id -> "YouTube video " + id).orElseGet(() -> firstWords(source));
     }
+    String author = details.map(YouTubeVideoDetails.VideoDetails::channel).orElse("");
+    String published =
+        details
+            .map(YouTubeVideoDetails.VideoDetails::published)
+            .map(LocalDate::toString)
+            .orElse("");
 
     ModelClient.ModelReply reply =
         model.complete(
@@ -79,7 +96,11 @@ class BriefService {
             + type
             + "\ntitle: "
             + quoted(title)
-            + "\nauthor: \"\"\npublished: \"\"\nfetched_at: "
+            + "\nauthor: "
+            + quoted(author)
+            + "\npublished: "
+            + quoted(published)
+            + "\nfetched_at: "
             + quoted(now.toString())
             + "\ntranscript_source: "
             + transcriptSource
@@ -107,6 +128,10 @@ class BriefService {
             + type
             + "\ntitle: "
             + quoted(title)
+            + "\nauthor: "
+            + quoted(author)
+            + "\npublished: "
+            + quoted(published)
             + "\nfetched_at: "
             + quoted(now.toString())
             + "\ntranscript_source: "

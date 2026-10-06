@@ -25,23 +25,37 @@ class ResearchConfiguration {
   }
 
   @Bean
+  YouTubeVideoDetails youTubeVideoDetails(ResearchProperties properties) {
+    ResearchProperties.YouTube youtube = properties.youtube();
+    return new YouTubeVideoDetails(
+        youtube.baseUrl(), youtube.apiKey(), restClient(youtube.timeout()));
+  }
+
+  @Bean
   ModelClient modelClient(ResearchProperties properties) {
+    return new OpenAiCompatibleModelClient(
+        properties.providers(), restClient(properties.modelTimeout()), Thread::sleep);
+  }
+
+  @Bean
+  BriefService briefService(
+      ResearchVault vault,
+      TranscriptFetcher transcripts,
+      YouTubeVideoDetails videoDetails,
+      ModelClient modelClient) {
+    return new BriefService(
+        vault, transcripts, videoDetails, modelClient, Clock.systemDefaultZone());
+  }
+
+  /** An outbound client that never follows redirects and gives up after the read timeout. */
+  private static RestClient restClient(Duration readTimeout) {
     HttpClient httpClient =
         HttpClient.newBuilder()
             .connectTimeout(Duration.ofSeconds(10))
             .followRedirects(HttpClient.Redirect.NEVER)
             .build();
     JdkClientHttpRequestFactory requestFactory = new JdkClientHttpRequestFactory(httpClient);
-    requestFactory.setReadTimeout(properties.modelTimeout());
-    return new OpenAiCompatibleModelClient(
-        properties.providers(),
-        RestClient.builder().requestFactory(requestFactory).build(),
-        Thread::sleep);
-  }
-
-  @Bean
-  BriefService briefService(
-      ResearchVault vault, TranscriptFetcher transcripts, ModelClient modelClient) {
-    return new BriefService(vault, transcripts, modelClient, Clock.systemDefaultZone());
+    requestFactory.setReadTimeout(readTimeout);
+    return RestClient.builder().requestFactory(requestFactory).build();
   }
 }
