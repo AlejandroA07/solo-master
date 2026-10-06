@@ -41,14 +41,14 @@ class ResearchVaultTests {
   void writesBriefsUnderResearchBriefsWithoutOverwriting() throws IOException {
     ResearchVault vault = vault();
 
-    String first = vault.writeBrief(DAY, "Loops & Boundaries!", "one");
-    String second = vault.writeBrief(DAY, "Loops & Boundaries!", "two");
+    String first = vault.writeBrief(DAY, "Loops & Boundaries!", name -> "one");
+    String second = vault.writeBrief(DAY, "Loops & Boundaries!", name -> "two " + name);
 
     assertThat(first).isEqualTo("2026-09-29-loops-boundaries.md");
     assertThat(second).isEqualTo("2026-09-29-loops-boundaries-2.md");
     assertThat(Files.readString(vaultDir.resolve("SoloMaster/Research/Briefs/" + first)))
         .isEqualTo("one");
-    assertThat(vault.readBrief(second)).contains("two");
+    assertThat(vault.readBrief(second)).contains("two 2026-09-29-loops-boundaries-2.md");
   }
 
   @Test
@@ -91,7 +91,7 @@ class ResearchVaultTests {
   @Test
   void refusesToReadASymlinkedBrief() throws IOException {
     ResearchVault vault = vault();
-    vault.writeBrief(DAY, "real", "inside");
+    vault.writeBrief(DAY, "real", name -> "inside");
     Path outside = Files.writeString(vaultDir.resolve("outside.txt"), "secret", UTF_8);
     Files.createSymbolicLink(
         vaultDir.resolve("SoloMaster/Research/Briefs/2026-09-29-link.md"), outside);
@@ -105,7 +105,7 @@ class ResearchVaultTests {
     Files.createDirectories(vaultDir.resolve("SoloMaster"));
     Files.createSymbolicLink(vaultDir.resolve("SoloMaster/Research"), elsewhere);
 
-    assertThatThrownBy(() -> vault().writeBrief(DAY, "x", "y"))
+    assertThatThrownBy(() -> vault().writeBrief(DAY, "x", name -> "y"))
         .isInstanceOf(IllegalStateException.class);
   }
 
@@ -114,7 +114,7 @@ class ResearchVaultTests {
     Path elsewhere = Files.createTempDirectory("elsewhere");
     Files.createSymbolicLink(vaultDir.resolve("SoloMaster"), elsewhere);
 
-    assertThatThrownBy(() -> vault().writeBrief(DAY, "x", "y"))
+    assertThatThrownBy(() -> vault().writeBrief(DAY, "x", name -> "y"))
         .isInstanceOf(IllegalStateException.class);
   }
 

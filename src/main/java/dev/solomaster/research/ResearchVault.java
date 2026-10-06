@@ -14,6 +14,7 @@ import java.text.Normalizer;
 import java.time.LocalDate;
 import java.util.Locale;
 import java.util.Optional;
+import java.util.function.Function;
 import java.util.regex.Pattern;
 
 /**
@@ -80,14 +81,21 @@ class ResearchVault {
     }
   }
 
-  /** Writes a new brief under {@code SoloMaster/Research/Briefs/} and returns its note name. */
-  String writeBrief(LocalDate date, String title, String markdown) {
+  /**
+   * Writes a new brief under {@code SoloMaster/Research/Briefs/} and returns its note name. The
+   * markdown is built from the final name, which gets a numeric suffix when the base name is taken.
+   */
+  String writeBrief(LocalDate date, String title, Function<String, String> markdownForName) {
     Path briefs = folder("Briefs");
     String base = date + "-" + slug(title);
     for (int suffix = 1; ; suffix++) {
       String name = (suffix == 1 ? base : base + "-" + suffix) + ".md";
       try {
-        Files.writeString(contained(briefs, name), markdown, UTF_8, StandardOpenOption.CREATE_NEW);
+        Files.writeString(
+            contained(briefs, name),
+            markdownForName.apply(name),
+            UTF_8,
+            StandardOpenOption.CREATE_NEW);
         return name;
       } catch (FileAlreadyExistsException e) {
         // Keep the existing note; try the next suffix.

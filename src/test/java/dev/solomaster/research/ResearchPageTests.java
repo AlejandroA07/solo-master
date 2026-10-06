@@ -95,7 +95,10 @@ class ResearchPageTests {
         .contains("model: \"fake-model\"")
         .contains("prompt_version: brief-v1")
         .contains("status: unreviewed")
-        .contains("# Loops and boundaries\n\n## In short");
+        .contains(
+            "# Loops and boundaries\n\nTranscript: [[SoloMaster/Research/Sources/"
+                + name.replace(".md", "")
+                + "|full transcript]]\n\n## In short");
     assertThat(Files.readString(vaultDir.resolve("SoloMaster/Research/Sources/" + name), UTF_8))
         .contains("For loops end early.")
         .contains("brief: \"SoloMaster/Research/Briefs/" + name + "\"");
