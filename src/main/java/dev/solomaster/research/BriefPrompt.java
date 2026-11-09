@@ -11,7 +11,7 @@ import java.util.Locale;
 /** The versioned brief prompt and the check that a reply follows the ADR-0004 template. */
 final class BriefPrompt {
 
-  static final String VERSION = "brief-v1";
+  static final String VERSION = "brief-v2";
 
   static final List<String> SECTIONS =
       List.of(

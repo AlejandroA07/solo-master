@@ -138,12 +138,12 @@ class ResearchPageTests {
         .contains("content_hash: \"sha256:")
         .contains("provider: \"fake\"")
         .contains("model: \"fake-model\"")
-        .contains("prompt_version: brief-v1")
+        .contains("prompt_version: brief-v2")
         .contains("status: unreviewed")
         .contains(
-            "# Loops and boundaries\n\nTranscript: [[SoloMaster/Research/Sources/"
+            "# Loops and boundaries\n\nFull text: [[SoloMaster/Research/Sources/"
                 + name.replace(".md", "")
-                + "|full transcript]]\n\n## In short");
+                + "|full text]]\n\n## In short");
     assertThat(Files.readString(vaultDir.resolve("SoloMaster/Research/Sources/" + name), UTF_8))
         .contains("For loops end early.")
         .contains("brief: \"SoloMaster/Research/Briefs/" + name + "\"");
@@ -171,7 +171,8 @@ class ResearchPageTests {
         .contains("author: \"Java Channel\"")
         .contains("published: \"2026-09-30\"")
         .contains("transcript_source: youtube-transcript-api")
-        .contains("# Records in \"Java\" 21\n");
+        .contains("# Records in \"Java\" 21\n")
+        .contains("|full transcript]]");
     assertThat(Files.readString(vaultDir.resolve("SoloMaster/Research/Sources/" + name), UTF_8))
         .contains("author: \"Java Channel\"")
         .contains("published: \"2026-09-30\"")

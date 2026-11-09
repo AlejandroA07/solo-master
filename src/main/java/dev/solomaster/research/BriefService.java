@@ -19,6 +19,7 @@ class BriefService {
 
   static final int MAX_LINK_LENGTH = 2_048;
   static final int MAX_TITLE_LENGTH = 200;
+  private static final int FALLBACK_TITLE_LENGTH = 80;
   static final int MAX_TEXT_LENGTH = 400_000;
 
   private final ResearchVault vault;
@@ -119,7 +120,7 @@ class BriefService {
         vault.writeBrief(
             LocalDate.ofInstant(now, clock.getZone()),
             title,
-            noteName -> heading + transcriptLink(noteName) + body);
+            noteName -> heading + sourceLink(noteName, videoId.isPresent()) + body);
 
     String sourceNote =
         "---\nsource_url: "
@@ -148,9 +149,11 @@ class BriefService {
   }
 
   /** An Obsidian link to the source note, which shares the brief's note name. */
-  private static String transcriptLink(String noteName) {
+  private static String sourceLink(String noteName, boolean video) {
     String target = ResearchVault.FOLDER + "/Sources/" + noteName.replaceFirst("\\.md$", "");
-    return "Transcript: [[" + target + "|full transcript]]\n\n";
+    return video
+        ? "Transcript: [[" + target + "|full transcript]]\n\n"
+        : "Full text: [[" + target + "|full text]]\n\n";
   }
 
   private static void validateLengths(String link, String title, String text) {
@@ -173,9 +176,29 @@ class BriefService {
     return value == null ? null : value.replaceAll("\\p{Cntrl}+", " ").strip();
   }
 
-  private static String firstWords(String text) {
+  /**
+   * A title for pasted text without one: its first line, or the first sentence of a long line, or
+   * else the words that fit in 80 characters followed by an ellipsis. Never cuts a word in half.
+   */
+  static String firstWords(String text) {
     String firstLine = singleLine(text.lines().findFirst().orElse("Pasted text"));
-    return firstLine.length() <= 80 ? firstLine : firstLine.substring(0, 80).strip();
+    if (firstLine.length() <= FALLBACK_TITLE_LENGTH) {
+      return firstLine;
+    }
+    int sentenceEnd = firstLine.indexOf(". ");
+    if (sentenceEnd > 0 && sentenceEnd < FALLBACK_TITLE_LENGTH) {
+      return firstLine.substring(0, sentenceEnd);
+    }
+    int lastSpace = firstLine.lastIndexOf(' ', FALLBACK_TITLE_LENGTH);
+    String words =
+        lastSpace > 0
+            ? firstLine.substring(0, lastSpace)
+            : firstLine.substring(0, FALLBACK_TITLE_LENGTH);
+    int end = words.length();
+    while (end > 0 && " \t,;:".indexOf(words.charAt(end - 1)) >= 0) {
+      end--;
+    }
+    return words.substring(0, end) + "…";
   }
 
   /** A YAML double-quoted scalar; control characters are dropped. */
