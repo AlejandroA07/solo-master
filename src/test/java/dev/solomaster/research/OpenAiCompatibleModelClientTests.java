@@ -150,7 +150,34 @@ class OpenAiCompatibleModelClientTests {
         .andRespond(withServerError());
 
     assertThatThrownBy(() -> client(FIRST, SECOND).complete(PROMPT, text -> true))
-        .isInstanceOf(ModelUnavailableException.class);
+        .isInstanceOfSatisfying(
+            ModelUnavailableException.class,
+            e ->
+                assertThat(e.failures())
+                    .containsExactly(
+                        "model-a: out of free quota or rate limited (HTTP 429)",
+                        "model-b: failed (HTTP 500)"));
+    server.verify();
+  }
+
+  @Test
+  void saysWhichModelIsGoneWhenAProviderNoLongerServesIt() {
+    var keyless =
+        new ResearchProperties.Provider("keyless", "https://first.example/v1", "model-k", "");
+    server
+        .expect(requestTo("https://second.example/v1/chat/completions"))
+        .andRespond(withStatus(HttpStatus.NOT_FOUND));
+
+    assertThatThrownBy(() -> client(keyless, SECOND).complete(PROMPT, text -> true))
+        .isInstanceOfSatisfying(
+            ModelUnavailableException.class,
+            e ->
+                assertThat(e.failures())
+                    .containsExactly(
+                        "model-k: skipped, no API key configured",
+                        "model-b: model not found (HTTP 404); it may have been retired,"
+                            + " update its ID"));
+    assertThat(pauses).isEmpty();
     server.verify();
   }
 
