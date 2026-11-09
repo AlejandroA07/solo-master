@@ -190,8 +190,15 @@ class BriefService {
       return firstLine.substring(0, sentenceEnd);
     }
     int lastSpace = firstLine.lastIndexOf(' ', FALLBACK_TITLE_LENGTH);
-    String words = lastSpace > 0 ? firstLine.substring(0, lastSpace) : firstLine.substring(0, 80);
-    return words.replaceAll("[\\s,;:]+$", "") + "…";
+    String words =
+        lastSpace > 0
+            ? firstLine.substring(0, lastSpace)
+            : firstLine.substring(0, FALLBACK_TITLE_LENGTH);
+    int end = words.length();
+    while (end > 0 && " \t,;:".indexOf(words.charAt(end - 1)) >= 0) {
+      end--;
+    }
+    return words.substring(0, end) + "…";
   }
 
   /** A YAML double-quoted scalar; control characters are dropped. */

@@ -34,4 +34,11 @@ class BriefServiceTitleTests {
             "Today's digital-first companies rely on analysts to make sense of data, generate…");
     assertThat(title.length()).isLessThanOrEqualTo(81);
   }
+
+  @Test
+  void dropsTrailingPunctuationBeforeTheEllipsis() {
+    String text = "x".repeat(70) + " ending, more words that run past the limit";
+
+    assertThat(BriefService.firstWords(text)).isEqualTo("x".repeat(70) + " ending…");
+  }
 }
