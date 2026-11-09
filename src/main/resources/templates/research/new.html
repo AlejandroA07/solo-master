@@ -10,7 +10,7 @@
     <div class="alert alert-danger" role="alert" th:if="${error}" th:text="${error}"
          data-testid="research-error">Error</div>
 
-    <form method="post" th:action="@{/research}">
+    <form method="post" th:action="@{/research}" data-research-form>
         <div class="mb-3">
             <label for="link" class="form-label">YouTube link or source URL</label>
             <input type="url" class="form-control" id="link" name="link" maxlength="2048"
@@ -28,9 +28,37 @@
             <textarea class="form-control" id="text" name="text" rows="10"
                       th:attr="maxlength=${maxText}" th:text="${request.text}"></textarea>
         </div>
-        <button type="submit" class="btn btn-primary">Write brief</button>
+        <button type="submit" class="btn btn-primary" data-research-submit>
+            <span class="spinner-border spinner-border-sm me-1" aria-hidden="true" hidden
+                  data-research-spinner></span>
+            <span data-research-label>Write brief</span>
+        </button>
         <span class="form-text ms-2">This can take a minute.</span>
     </form>
+
+    <section class="research-progress card mt-4" hidden data-research-progress
+             data-testid="research-progress" aria-labelledby="research-progress-title">
+        <div class="card-body">
+            <div class="d-flex align-items-center mb-3">
+                <div class="research-pulse me-3" aria-hidden="true"></div>
+                <div>
+                    <h2 class="h5 mb-0" id="research-progress-title">Writing your brief</h2>
+                    <div class="text-muted small" role="status" aria-live="polite">
+                        Working for <span data-research-elapsed>0s</span>. Keep this tab open.
+                    </div>
+                </div>
+            </div>
+            <div class="progress mb-3" role="progressbar" aria-label="Brief in progress">
+                <div class="progress-bar progress-bar-striped progress-bar-animated w-100"></div>
+            </div>
+            <ol class="research-steps small text-muted mb-0">
+                <li>Fetching captions or reading your pasted text</li>
+                <li>Asking the AI model for a brief (the slow part; busy models are retried)</li>
+                <li>Saving the brief to your vault</li>
+            </ol>
+        </div>
+    </section>
+    <script th:src="@{/js/research-progress.js}" defer></script>
 </main>
 </body>
 </html>
