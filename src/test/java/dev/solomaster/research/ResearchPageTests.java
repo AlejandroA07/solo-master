@@ -82,7 +82,8 @@ class ResearchPageTests {
     @Override
     public ModelReply complete(ModelPrompt prompt, java.util.function.Predicate<String> usable) {
       if (prompt.user().contains("Title: model-down")) {
-        throw new ModelUnavailableException();
+        throw new ModelUnavailableException(
+            java.util.List.of("model-a: out of free quota or rate limited (HTTP 429)"));
       }
       lastPrompt.set(prompt);
       assertThat(usable.test(BriefPromptTests.COMPLETE_BRIEF)).isTrue();
@@ -236,7 +237,9 @@ class ResearchPageTests {
     Result result = post(form("", "model-down", "text"), null);
 
     assertThat(result.status()).isEqualTo(503);
-    assertThat(result.body()).contains("No model is available right now");
+    assertThat(result.body())
+        .contains("No model could write the brief")
+        .contains("model-a: out of free quota or rate limited (HTTP 429)");
   }
 
   @Test

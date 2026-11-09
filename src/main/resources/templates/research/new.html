@@ -7,8 +7,12 @@
     <p>Give a YouTube link, or paste the text of an article, post, or transcript. The brief is
         written to your vault under <code>SoloMaster/Research/Briefs/</code> as <em>unreviewed</em>.</p>
 
-    <div class="alert alert-danger" role="alert" th:if="${error}" th:text="${error}"
-         data-testid="research-error">Error</div>
+    <div class="alert alert-danger" role="alert" th:if="${error}" data-testid="research-error">
+        <span th:text="${error}">Error</span>
+        <ul class="mb-0 mt-2" th:if="${modelFailures}" data-testid="model-failures">
+            <li th:each="failure : ${modelFailures}" th:text="${failure}">model: reason</li>
+        </ul>
+    </div>
 
     <form method="post" th:action="@{/research}" data-research-form>
         <div class="mb-3">

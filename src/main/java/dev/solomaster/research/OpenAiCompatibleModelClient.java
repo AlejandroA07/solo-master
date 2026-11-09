@@ -4,6 +4,7 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 
 import java.net.URI;
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -55,35 +56,47 @@ class OpenAiCompatibleModelClient implements ModelClient {
 
   @Override
   public ModelReply complete(ModelPrompt prompt, Predicate<String> usable) {
+    List<String> failures = new ArrayList<>();
     for (ResearchProperties.Provider provider : providers) {
       if (provider.apiKey() == null || provider.apiKey().isBlank()) {
         log.warn("Model provider {} skipped: no API key configured", provider.name());
+        failures.add(provider.model() + ": skipped, no API key configured");
         continue;
       }
+      String outcome = null;
       for (int attempt = 1; attempt <= ATTEMPTS_PER_PROVIDER; attempt++) {
-        Optional<String> text = call(provider, prompt);
-        if (text.isEmpty()) {
+        Attempt result = call(provider, prompt);
+        if (result.text() == null) {
+          outcome = result.failure();
           break;
         }
-        if (usable.test(text.get())) {
-          return new ModelReply(text.get(), provider.name(), provider.model());
+        if (usable.test(result.text())) {
+          return new ModelReply(result.text(), provider.name(), provider.model());
         }
         log.warn("Model provider {} gave unusable output (attempt {})", provider.name(), attempt);
+        outcome = "replied, but not in the brief format";
       }
+      failures.add(provider.model() + ": " + outcome);
     }
-    throw new ModelUnavailableException();
+    throw new ModelUnavailableException(failures);
   }
 
-  /** Returns the reply text, or empty when this provider failed and the next should be tried. */
-  private Optional<String> call(ResearchProperties.Provider provider, ModelPrompt prompt) {
+  /** A reply text, or why this provider failed and the next should be tried. */
+  private record Attempt(String text, String failure) {
+    static Attempt failed(String why) {
+      return new Attempt(null, why);
+    }
+  }
+
+  private Attempt call(ResearchProperties.Provider provider, ModelPrompt prompt) {
     for (int busyRetry = 0; ; busyRetry++) {
       Optional<Response> response = send(provider, prompt);
       if (response.isEmpty()) {
-        return Optional.empty();
+        return Attempt.failed("unreachable (network error or timeout)");
       }
       int status = response.get().status();
       if (status == 200) {
-        return Optional.of(replyText(response.get().body()));
+        return new Attempt(replyText(response.get().body()), null);
       }
       log.warn(
           "Model provider {} ({}) returned HTTP {}: {}",
@@ -93,15 +106,29 @@ class OpenAiCompatibleModelClient implements ModelClient {
           errorDetail(response.get().body(), provider.apiKey()));
       boolean busy = status == 429 || status == 503;
       if (!busy || busyRetry == BUSY_RETRY_PAUSES.size()) {
-        return Optional.empty();
+        return Attempt.failed(describe(status));
       }
       try {
         pause.await(BUSY_RETRY_PAUSES.get(busyRetry));
       } catch (InterruptedException e) {
         Thread.currentThread().interrupt();
-        return Optional.empty();
+        return Attempt.failed("interrupted");
       }
     }
+  }
+
+  /**
+   * A plain reason for a failed status, shown to the user; the provider's own text stays in logs.
+   */
+  static String describe(int status) {
+    return switch (status) {
+      case 429 -> "out of free quota or rate limited (HTTP 429)";
+      case 503 -> "overloaded (HTTP 503)";
+      case 404 -> "model not found (HTTP 404); it may have been retired, update its ID";
+      case 401, 403 -> "API key rejected (HTTP " + status + ")";
+      case 400 -> "request rejected (HTTP 400); the model ID may be wrong";
+      default -> "failed (HTTP " + status + ")";
+    };
   }
 
   private record Response(int status, String body) {}

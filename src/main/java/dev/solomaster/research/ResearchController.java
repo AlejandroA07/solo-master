@@ -56,10 +56,13 @@ class ResearchController {
           "Couldn't get captions for this video. Paste the transcript text below and try again.",
           HttpStatus.UNPROCESSABLE_CONTENT);
     } catch (ModelUnavailableException e) {
-      return form(
-          request,
-          "No model is available right now (quota or outage). Try again later.",
-          HttpStatus.SERVICE_UNAVAILABLE);
+      ModelAndView page =
+          form(
+              request,
+              "No model could write the brief. Each model was tried in order:",
+              HttpStatus.SERVICE_UNAVAILABLE);
+      page.addObject("modelFailures", e.failures());
+      return page;
     }
   }
 
