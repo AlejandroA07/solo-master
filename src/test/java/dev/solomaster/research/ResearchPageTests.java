@@ -105,6 +105,19 @@ class ResearchPageTests {
   }
 
   @Test
+  void showsProgressWhileABriefIsBeingWritten() {
+    var page = http().get().uri("/research/new").retrieve().body(String.class);
+
+    assertThat(page)
+        .contains("data-research-form")
+        .contains("data-testid=\"research-progress\"")
+        .contains("src=\"/js/research-progress.js\"");
+    var script = http().get().uri("/js/research-progress.js").retrieve().toEntity(String.class);
+    assertThat(script.getStatusCode().value()).isEqualTo(200);
+    assertThat(script.getBody()).contains("[data-research-progress]");
+  }
+
+  @Test
   void turnsPastedTextIntoAnUnreviewedBriefInTheVault() throws IOException {
     Result created =
         post(

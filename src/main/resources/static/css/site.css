@@ -81,3 +81,43 @@ button.accept-policy {
   word-wrap: break-word;
   font-size: 0.95rem;
 }
+
+/* Research: shown while a brief is being written (js/research-progress.js). */
+.research-progress {
+  border-color: #b6d4f2;
+  animation: research-fade-in 0.3s ease-out;
+}
+
+.research-pulse {
+  flex: none;
+  width: 1rem;
+  height: 1rem;
+  border-radius: 50%;
+  background-color: #1b6ec2;
+  animation: research-pulse 1.4s ease-out infinite;
+}
+
+.research-progress .progress {
+  height: 0.6rem;
+}
+
+.research-steps li + li {
+  margin-top: 0.25rem;
+}
+
+@keyframes research-pulse {
+  0% { box-shadow: 0 0 0 0 rgba(27, 110, 194, 0.6); }
+  70% { box-shadow: 0 0 0 0.75rem rgba(27, 110, 194, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(27, 110, 194, 0); }
+}
+
+@keyframes research-fade-in {
+  from { opacity: 0; transform: translateY(0.5rem); }
+  to { opacity: 1; transform: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .research-progress, .research-pulse, .research-progress .progress-bar {
+    animation: none;
+  }
+}
