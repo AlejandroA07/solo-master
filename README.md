@@ -26,6 +26,6 @@ The initial subject is Java and Spring Boot (switched from C# and .NET; see ADR-
 ## Run it
 
 ```bash
-./gradlew bootRun        # http://127.0.0.1:8080
+./gradlew bootRun        # http://127.0.0.1:8090 (SOLOMASTER_PORT to change)
 ./scripts/verify.sh      # full quality gate
 ```
