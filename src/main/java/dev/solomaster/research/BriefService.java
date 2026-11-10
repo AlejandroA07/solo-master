@@ -5,6 +5,7 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.time.Clock;
+import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
@@ -46,6 +47,7 @@ class BriefService {
 
   /** Creates the brief and returns its note name. */
   String create(Request request) {
+    Instant started = clock.instant();
     String link = blankToNull(request.link());
     String title = singleLine(blankToNull(request.title()));
     String text = blankToNull(request.text());
@@ -87,7 +89,10 @@ class BriefService {
         model.complete(
             BriefPrompt.build(vault.setupContext(), title, link, source), BriefPrompt::isComplete);
 
-    Instant now = clock.instant().truncatedTo(ChronoUnit.SECONDS);
+    Instant finished = clock.instant();
+    // From pressing the button to a written brief: transcript, video details and the model.
+    long generationSeconds = Duration.between(started, finished).toSeconds();
+    Instant now = finished.truncatedTo(ChronoUnit.SECONDS);
     String type = videoId.isPresent() ? "youtube" : "text";
     String frontMatter =
         "---\n"
@@ -113,6 +118,8 @@ class BriefService {
             + quoted(reply.model())
             + "\nprompt_version: "
             + BriefPrompt.VERSION
+            + "\ngeneration_seconds: "
+            + generationSeconds
             + "\nstatus: unreviewed\ntriage: []\n---\n\n";
     String heading = frontMatter + "# " + title + "\n\n";
     String body = BriefPrompt.clean(reply.text()) + "\n";
