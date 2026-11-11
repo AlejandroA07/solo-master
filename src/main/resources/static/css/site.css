@@ -121,3 +121,8 @@ button.accept-policy {
     animation: none;
   }
 }
+
+/* Model failure reasons on the research inbox are one per line. */
+.inbox-error {
+    white-space: pre-line;
+}

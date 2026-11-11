@@ -28,6 +28,38 @@ class ResearchVaultTests {
   }
 
   @Test
+  void findsTheVideosThatAlreadyHaveABrief() throws IOException {
+    ResearchVault vault = vault();
+    assertThat(vault.briefedVideos()).isEmpty();
+
+    Path briefs = Files.createDirectories(vaultDir.resolve("SoloMaster/Research/Briefs"));
+    Files.writeString(
+        briefs.resolve("2026-11-01-loops.md"),
+        "---\nsource_url: \"https://www.youtube.com/watch?v=aaaaaaaaaaa\"\ntype: youtube\n---\n",
+        UTF_8);
+    Files.writeString(
+        briefs.resolve("2026-11-02-records.md"),
+        "---\ntype: youtube\nsource_url: https://youtu.be/bbbbbbbbbbb\n---\n",
+        UTF_8);
+    Files.writeString(
+        briefs.resolve("2026-11-03-article.md"),
+        "---\nsource_url: \"https://example.com/post\"\n---\n",
+        UTF_8);
+    Files.writeString(
+        briefs.resolve("2026-11-04-body-only.md"),
+        "---\ntype: text\n---\nsource_url: https://youtu.be/ccccccccccc\n",
+        UTF_8);
+    Files.writeString(
+        briefs.resolve("notes.md"), "---\nsource_url: https://youtu.be/ddddddddddd\n---\n", UTF_8);
+    Files.write(briefs.resolve("2026-11-05-binary.md"), new byte[] {(byte) 0xff, (byte) 0xfe});
+
+    assertThat(vault.briefedVideos())
+        .containsOnly(
+            java.util.Map.entry("aaaaaaaaaaa", "2026-11-01-loops.md"),
+            java.util.Map.entry("bbbbbbbbbbb", "2026-11-02-records.md"));
+  }
+
+  @Test
   void createsTheSetupTemplateOnceAndKeepsEdits() throws IOException {
     ResearchVault vault = vault();
     assertThat(vault.setupContext()).contains("# My setup").contains("Never put passwords");

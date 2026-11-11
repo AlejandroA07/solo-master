@@ -90,7 +90,8 @@ class YouTubeVideoDetails {
             date(snippet.path("publishedAt"))));
   }
 
-  private static String text(JsonNode node, int maxLength) {
+  /** Untrusted text flattened to one line and capped; null when missing or blank. */
+  static String text(JsonNode node, int maxLength) {
     if (!node.isString()) {
       return null;
     }

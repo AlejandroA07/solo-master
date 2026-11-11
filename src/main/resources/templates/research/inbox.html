@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout :: page(title='Research inbox', content=~{::main})}">
+<body>
+<main role="main" class="pb-3">
+    <!-- While a run is going, reload every 5 seconds to show progress. -->
+    <meta http-equiv="refresh" content="5" th:if="${running}" />
+
+    <h1 data-testid="inbox-heading">Research inbox</h1>
+    <p>Run now reads your <strong>Research</strong> playlist and writes a brief for every video that
+        doesn't have one yet, at most <span th:text="${maxItems}">10</span> per run. A video that
+        fails stays here and is tried again on the next Run now.</p>
+
+    <div class="alert alert-warning" role="alert" th:if="${setupProblem}"
+         data-testid="inbox-setup-problem" th:text="${setupProblem}">Setup problem</div>
+    <div class="alert alert-danger" role="alert" th:if="${lastProblem}"
+         data-testid="inbox-last-problem" th:text="${lastProblem}">Last problem</div>
+
+    <form method="post" th:action="@{/research/inbox/run}" class="mb-4">
+        <button type="submit" class="btn btn-primary" data-testid="run-now"
+                th:disabled="${running or setupProblem != null}">
+            <span class="spinner-border spinner-border-sm me-1" aria-hidden="true"
+                  th:if="${running}"></span>
+            <span th:text="${running} ? 'Running…' : 'Run now'">Run now</span>
+        </button>
+        <span class="form-text ms-2" th:if="${running}" role="status" data-testid="inbox-running">
+            Writing briefs, one at a time. Each can take a few minutes; this page updates itself.</span>
+    </form>
+
+    <p th:if="${#lists.isEmpty(items)}" data-testid="inbox-empty">Nothing yet. Save a video to your
+        Research playlist on YouTube, then press Run now.</p>
+
+    <table class="table align-middle" th:unless="${#lists.isEmpty(items)}" data-testid="inbox-items">
+        <thead>
+        <tr>
+            <th scope="col">Video</th>
+            <th scope="col">Status</th>
+            <th scope="col">Details</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr th:each="item : ${items}" th:attr="data-status=${item.status}">
+            <td th:text="${item.title}">Title</td>
+            <td>
+                <span class="badge text-bg-success" th:if="${item.status == 'done'}">Briefed</span>
+                <span class="badge text-bg-secondary" th:if="${item.status == 'queued'}">Queued</span>
+                <span class="badge text-bg-danger" th:if="${item.status == 'failed'}">Failed</span>
+            </td>
+            <td>
+                <a th:if="${item.briefName}" th:href="@{/research/briefs/{name}(name=${item.briefName})}">Open
+                    brief</a>
+                <div th:if="${item.lastError}" class="small text-danger inbox-error"
+                     th:text="${item.lastError}">Reason</div>
+                <div th:if="${item.status == 'failed'}" class="small text-muted"
+                     th:text="|Tried ${item.attempts} time(s); tried again on the next Run now.|">Tried</div>
+            </td>
+        </tr>
+        </tbody>
+    </table>
+</main>
+</body>
+</html>
