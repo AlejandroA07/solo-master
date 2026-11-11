@@ -7,6 +7,7 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.client.JdkClientHttpRequestFactory;
+import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.web.client.RestClient;
 
 @Configuration(proxyBeanMethods = false)
@@ -45,6 +46,31 @@ class ResearchConfiguration {
       ModelClient modelClient) {
     return new BriefService(
         vault, transcripts, videoDetails, modelClient, Clock.systemDefaultZone());
+  }
+
+  @Bean
+  YouTubePlaylist youTubePlaylist(ResearchProperties properties) {
+    ResearchProperties.YouTube youtube = properties.youtube();
+    return new YouTubePlaylist(
+        youtube.baseUrl(), youtube.apiKey(), youtube.playlistId(), restClient(youtube.timeout()));
+  }
+
+  @Bean
+  RunItems runItems(JdbcClient db) {
+    return new RunItems(db);
+  }
+
+  /** Each run gets its own virtual thread; there is no pool to shut down. */
+  @Bean
+  InboxRun inboxRun(
+      YouTubePlaylist playlist, RunItems items, BriefService briefs, ResearchVault vault) {
+    return new InboxRun(
+        playlist,
+        items,
+        briefs,
+        vault,
+        run -> Thread.ofVirtual().name("run-now").start(run),
+        Clock.systemDefaultZone());
   }
 
   /** An outbound client that never follows redirects and gives up after the read timeout. */

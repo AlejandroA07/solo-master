@@ -35,6 +35,10 @@ extra["jackson-bom.version"] = "3.1.7"
 dependencies {
     implementation("org.springframework.boot:spring-boot-starter-web")
     implementation("org.springframework.boot:spring-boot-starter-thymeleaf")
+    // Persistence (ADR-0006): JdbcClient on one SQLite file, schema by Flyway migrations.
+    implementation("org.springframework.boot:spring-boot-starter-jdbc")
+    implementation("org.springframework.boot:spring-boot-starter-flyway")
+    runtimeOnly("org.xerial:sqlite-jdbc")
     testImplementation("org.springframework.boot:spring-boot-starter-test")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }
@@ -45,6 +49,17 @@ tasks.withType<JavaCompile>().configureEach {
 
 tasks.withType<Test>().configureEach {
     useJUnitPlatform()
+    // Tests never touch the real database: every run starts from an empty file under build/.
+    val testDatabase =
+        layout.buildDirectory
+            .file("test-db/solo-master.db")
+            .get()
+            .asFile
+    systemProperty("SOLOMASTER_DB_PATH", testDatabase.path)
+    doFirst {
+        testDatabase.parentFile.deleteRecursively()
+        testDatabase.parentFile.mkdirs()
+    }
 }
 
 spotless {

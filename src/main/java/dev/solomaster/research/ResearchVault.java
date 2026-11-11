@@ -12,10 +12,14 @@ import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.text.Normalizer;
 import java.time.LocalDate;
+import java.util.HashMap;
+import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Optional;
 import java.util.function.Function;
 import java.util.regex.Pattern;
+import java.util.stream.Stream;
 
 /**
  * The Obsidian vault as seen by the research module (ADR-0004): it writes only under {@code
@@ -31,6 +35,7 @@ class ResearchVault {
       Pattern.compile("\\d{4}-\\d{2}-\\d{2}-[a-z0-9]+(?:-[a-z0-9]+)*\\.md");
 
   private static final int MAX_SLUG_LENGTH = 60;
+  private static final int FRONT_MATTER_LINES = 40;
   private static final String SETUP_TEMPLATE =
       """
       # My setup
@@ -130,6 +135,59 @@ class ResearchVault {
       return Optional.of(Files.readString(brief, UTF_8));
     } catch (IOException e) {
       throw new UncheckedIOException(e);
+    }
+  }
+
+  /**
+   * The YouTube videos that already have a brief, by video ID, each with its brief's note name.
+   * Read from each brief's {@code source_url} front-matter, so it also counts briefs written before
+   * the database existed (the vault owns the briefs; ADR-0002 item 7).
+   */
+  Map<String, String> briefedVideos() {
+    Map<String, String> videos = new HashMap<>();
+    Path briefs = research.resolve("Briefs");
+    if (!isConfigured() || !Files.isDirectory(briefs, LinkOption.NOFOLLOW_LINKS)) {
+      return videos;
+    }
+    try (Stream<Path> notes = Files.list(briefs)) {
+      for (Path note : notes.sorted().toList()) {
+        String name = note.getFileName().toString();
+        if (NOTE_NAME.matcher(name).matches()
+            && Files.isRegularFile(note, LinkOption.NOFOLLOW_LINKS)) {
+          sourceUrl(note)
+              .flatMap(YouTubeLinks::videoId)
+              .ifPresent(id -> videos.putIfAbsent(id, name));
+        }
+      }
+    } catch (IOException e) {
+      throw new UncheckedIOException(e);
+    }
+    return videos;
+  }
+
+  /** The {@code source_url} value from a note's front-matter, if it has one. */
+  private static Optional<String> sourceUrl(Path note) throws IOException {
+    try (Stream<String> lines = Files.lines(note, UTF_8)) {
+      List<String> head = lines.limit(FRONT_MATTER_LINES).toList();
+      if (head.isEmpty() || !head.get(0).equals("---")) {
+        return Optional.empty();
+      }
+      for (String line : head.subList(1, head.size())) {
+        if (line.equals("---")) {
+          break;
+        }
+        if (line.startsWith("source_url:")) {
+          String value = line.substring("source_url:".length()).strip();
+          if (value.length() >= 2 && value.startsWith("\"") && value.endsWith("\"")) {
+            value = value.substring(1, value.length() - 1);
+          }
+          return value.isEmpty() ? Optional.empty() : Optional.of(value);
+        }
+      }
+      return Optional.empty();
+    } catch (UncheckedIOException e) {
+      // Not valid UTF-8: not a brief this app wrote, so it has no source to match.
+      return Optional.empty();
     }
   }
 
